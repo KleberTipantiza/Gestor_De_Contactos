@@ -1,6 +1,5 @@
 package modelo;
 
-//Definición de la clase pública "persona"
 public class persona {
 	
 	// Declaración de variables privadas de la clase "persona"
@@ -62,8 +61,6 @@ public class persona {
 	public String getCategoria() {
 		return categoria; // Retorna el valor de la variable "categoria"
 	}
-	
-	
 
 	// Método público para establecer el valor de "categoria"
 	public void setCategoria(String categoria) {

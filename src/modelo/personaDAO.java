@@ -7,8 +7,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-//Definición de la clase pública "personaDAO"
 public class personaDAO {
+	
+	public static final Object bloqueoModificacion = new Object(); // 🔹 Definir el objeto de bloqueo
 	
 	// Declaración de atributos privados de la clase "personaDAO"
 	private File archivo; // Archivo donde se almacenarán los datos de los contactos
@@ -44,69 +45,150 @@ public class personaDAO {
 			}
 		}
 	}
+	
 	private void escribir(String texto){
-		
+	    // Crea un objeto FileWriter para escribir en el archivo de contactos  
 		FileWriter escribir;
 		try {
 			escribir = new FileWriter(archivo.getAbsolutePath(), true);
 			escribir.write(texto + "\n"); // Escribe los datos del contacto en el archivo
 			
-			escribir.close(); // Cierra el archivo
+			escribir.close(); // Cierra el archivo para guardar los cambios correctamente
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
-		
 	}
 
-	// Método público para escribir en el archivo
+	// Método público para escribir un contacto nuevo en el archivo
 	public boolean escribirArchivo() {
-//		// Prepara el archivo para escribir en la última línea
-//		FileWriter escribir = new FileWriter(archivo.getAbsolutePath(), true);
-//		escribir.write(persona.datosContacto() + "\n"); // Escribe los datos del contacto en el archivo
-//		// Cierra el archivo
-//		escribir.close();
-		escribir(persona.datosContacto());
-		return true; // Retorna true si la escritura fue exitosa
+	    try {
+	        // Verifica si el contacto existe antes de escribir
+	        if (existeContacto(persona.getNombre(), persona.getTelefono(), persona.getEmail(), persona.getCategoria())) {
+	            System.out.println("Contacto duplicado detectado. No se guardará.");
+	            return false; // Si el contacto ya existe no se escribe
+	        }
+
+	     // Abre el archivo en modo "append" para agregar nuevos contactos
+	        FileWriter escribir = new FileWriter(archivo.getAbsolutePath(), true);
+	        escribir.write(persona.datosContacto() + System.lineSeparator()); // Escribe los datos del contacto en el archivo
+	        escribir.close(); // Cierra el archivo para asegurar que los cambios se guarden correctamente
+
+	        return true; // Indica que el contacto fue guardado exitosamente
+	    } catch (IOException e) {
+	        e.printStackTrace(); // Manejo de error en caso de problemas con la escritura
+	        return false;
+	    }
 	}
 	
-	// Método público para leer los datos del archivo
+	// Metodo para leer los contactos desde el archivo y almacenarlos en una lista
 	public List<persona> leerArchivo() throws IOException {
-		// Cadena que contendrá toda la data del archivo
-		String contactos = "";
-		// Abre el archivo para leer
-		FileReader leer = new FileReader(archivo.getAbsolutePath());
-		int c;
-		while ((c = leer.read()) != -1) { // Lee hasta la última línea del archivo
-			contactos += String.valueOf((char) c);
-		}
-		String[] datos = contactos.split("\n"); // Separa cada contacto por salto de línea
-		// Crea una lista que almacenará cada persona encontrada
-		List<persona> personas = new ArrayList<>();
-		for (String contacto : datos) { // Recorre cada contacto
-			persona p = new persona(); // Crea una instancia de persona
-			p.setNombre(contacto.split(";")[0]); // Asigna el nombre
-			p.setTelefono(contacto.split(";")[1]); // Asigna el teléfono
-			p.setEmail(contacto.split(";")[2]); // Asigna el email
-			p.setCategoria(contacto.split(";")[3]); // Asigna la categoría
-			p.setFavorito(Boolean.parseBoolean(contacto.split(";")[4])); // Asigna si es favorito
-			personas.add(p); // Añade cada persona a la lista
-		}
-		leer.close(); // Cierra el archivo
-		return personas; // Retorna la lista de personas
+	    List<persona> personas = new ArrayList<>(); // Lista donde se almacenaran los contactos
+	    FileReader leer = new FileReader(archivo.getAbsolutePath());
+	    StringBuilder contactos = new StringBuilder();
+	    int c;
+	    boolean primeraLinea = true; // Bandera para identificar y omitir el encabezado
+
+	    // Leer el archivo caracter por caracter y almacenarlo en un StringBuilder
+	    while ((c = leer.read()) != -1) {
+	        contactos.append((char) c);
+	    }
+	    
+	    leer.close(); // Cerrar el archivo despues de la lectura
+
+	    String[] datos = contactos.toString().split("\n"); // Separa los contactos por líneas
+
+	    System.out.println("Contactos registrados en el archivo:");
+
+	    // Procesa cada línea del archivo y la converte en un objeto persona
+	    for (String contacto : datos) {
+	        if (primeraLinea) { 
+	            primeraLinea = false; // Omite el encabezado
+	            System.out.println("Encabezado detectado y omitido: " + contacto);
+	            continue;
+	        }
+
+	        if (contacto.trim().isEmpty()) {
+	            System.out.println("Línea vacía detectada. Ignorada.");
+	            continue;
+	        }
+
+	        String[] campos = contacto.split(";"); 
+
+	        if (campos.length == 5) { // Validar que tenga la estructura correcta
+	            persona p = new persona(campos[0].trim(), campos[1].trim(), campos[2].trim(), campos[3].trim(), Boolean.parseBoolean(campos[4].trim()));
+	            personas.add(p); // Agregar la persona a la lista
+	            System.out.println("Cargado: " + p.getNombre() + " - " + p.getTelefono());
+	        } else {
+	            System.out.println("Contacto con formato incorrecto. Ignorado.");
+	        }
+	    }
+
+	    return personas; // Retornar la lista con los contactos cargados
+	}
+
+	// Método público para guardar los contactos modificados o eliminados
+	public synchronized void actualizarContactos(List<persona> personas) throws IOException {
+	    try (FileWriter escritor = new FileWriter(archivo.getAbsolutePath())) {
+	        //Escribe el encabezado en el archivo para mantener la estructura
+	    	escritor.write("Nombre;Teléfono;Email;Categoría;Favorito" + System.lineSeparator()); // Mantiene el encabezado
+
+	        // Itera sobre la lista de contactos y guarda solo los válidos
+	        for (persona p : personas) {
+	            if (!p.getNombre().trim().isEmpty() && !p.getTelefono().trim().isEmpty()) { // Evita registros vacíos
+	                escritor.write(p.datosContacto() + System.lineSeparator());
+	            }
+	        }
+	    }
 	}
 	
-	// Método público para guardar los contactos modificados o eliminados
-	public void actualizarContactos(List<persona> personas) throws IOException {
-		// Borra los datos del archivo
-		archivo.delete();
-		// Recorre los elementos de la lista
-		for (persona p : personas) {
-			// Instancia el DAO
-			new personaDAO(p);
-			// Escribe en el archivo
-			escribirArchivo();
-		}
+	// Método para verificar si un contacto ya existe en el archivo
+	public boolean existeContacto(String nombre, String telefono, String email, String categoria) throws IOException {
+	    List<persona> personas = leerArchivo(); // Obtiene la lista de contactos guardados
+
+	    if (personas.isEmpty()) { // Si no hay contactos, retornar falso
+	        System.out.println("No hay contactos registrados.");
+	        return false;
+	    }
+
+	    for (persona p : personas) {
+	        if (p.getNombre() == null || p.getTelefono() == null || p.getEmail() == null) continue;
+
+	        // Normalizar los datos eliminando espacios y caracteres invisibles
+	        String nombreExistente = p.getNombre().trim().replaceAll("\\s+", " ").toLowerCase();
+	        String telefonoExistente = p.getTelefono().trim().replaceAll("\\s+", "");
+	        String emailExistente = p.getEmail().trim().replaceAll("\\s+", "").toLowerCase();
+
+	        String nombreNuevo = nombre.trim().replaceAll("\\s+", " ").toLowerCase();
+	        String telefonoNuevo = telefono.trim().replaceAll("\\s+", "");
+	        String emailNuevo = email.trim().replaceAll("\\s+", "").toLowerCase();
+
+	        //System.out.println("📌 Comparando con: " + nombreExistente + " - " + telefonoExistente + " - " + emailExistente + " - " + categoriaExistente);
+	       
+	        // Compara los datos normalizados para detectar duplicados
+	        if (nombreExistente.equals(nombreNuevo) && telefonoExistente.equals(telefonoNuevo) &&
+	            emailExistente.equals(emailNuevo)) {
+	            System.out.println("❌ Contacto duplicado detectado: " + nombreNuevo);
+	            return true; // Retorna verdadero si ya existe el contacto
+	        }
+	    }
+	    return false; // Si no se encontraron coincidencias, el contacto es nuevo
+	}
+
+	// Método para limpiar el archivo y reescribir solo los contactos válidos
+	public void limpiarArchivo() throws IOException {
+	    List<persona> personas = leerArchivo(); // Leer contactos antes de limpiar el archivo
+
+	    try (FileWriter escritor = new FileWriter(archivo.getAbsolutePath())) {
+	        // Escribie el encabezado para mantener la estructura del archivo
+	    	escritor.write("Nombre;Teléfono;Email;Categoría;Favorito" + System.lineSeparator()); // Mantener encabezado
+
+	        // Recorre la lista de contactos y guardar solo los que tienen datos validos
+	        for (persona p : personas) {
+	            if (!p.getNombre().trim().isEmpty() && !p.getTelefono().trim().isEmpty()) {
+	                escritor.write(p.datosContacto() + System.lineSeparator());
+	            }
+	        }
+	    }
 	}
 }

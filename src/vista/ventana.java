@@ -1,5 +1,6 @@
 package vista;
 
+import java.awt.Color;
 import java.awt.EventQueue;
 
 import javax.swing.JFrame;
@@ -17,11 +18,9 @@ import recursos.Internacionalizacion;
 import javax.swing.JLabel;
 import java.awt.Font;
 import javax.swing.JTextField;
-import javax.swing.ListSelectionModel;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JButton;
-import javax.swing.JList;
 
 public class ventana extends JFrame {
 
@@ -49,7 +48,12 @@ public class ventana extends JFrame {
 	private JLabel lbl_etiqueta2;
 	private JLabel lbl_etiqueta3;
 	private JLabel lbl_etiqueta4;
+	public JLabel lblNotificacion;
+	public int total;
+	public int favoritos;
+	public String categorias;
     
+	// Metodo Main
 	public static void main(String[] args) {
 		 // Invoca el método invokeLater de la clase EventQueue para ejecutar la creación de la interfaz de usuario en un hilo de despacho de eventos (Event Dispatch Thread).
 	    EventQueue.invokeLater(new Runnable() {
@@ -67,8 +71,9 @@ public class ventana extends JFrame {
 	    });
 	}
 
+	// 🔹 Constructor de la ventana principal, configura la interfaz y componentes
 	public ventana() {
-		Internacionalizacion.setIdioma("ES"); // Español por defecto
+		Internacionalizacion.setIdioma("ES"); // Establecer español como idioma por defecto
 		setTitle(Internacionalizacion.getTexto("window.title")); 
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setResizable(false);
@@ -87,18 +92,18 @@ public class ventana extends JFrame {
 		panelContactos = new JPanel();
 		panelEstadisticas = new JPanel();
 		
-		//Asegurar que se pueda modificar la posicion manualmente
+		// Asegurar que se pueda modificar la posicion manualmente
 		panelContactos.setLayout(null);
 		panelEstadisticas.setLayout(null);
 		
-		//Agregar pestañas al JTabbedPane
+		// Agregar pestañas al JTabbedPane
 		tabbedPane.addTab("Contactos", panelContactos);
 		tabbedPane.addTab("Estadisticas", panelEstadisticas);
 		
-		//JTabbed agregado a contentPane
+		// Agregar el JTabbedPane al panel principal
 		contentPane.add(tabbedPane);
 		
-		//Crear el modelo de la tabla con las columnas
+		// Crear el modelo de la tabla con las columnas
 		modeloTabla = new DefaultTableModel();
 		modeloTabla.addColumn("Nombre");
 		modeloTabla.addColumn("Telefono");
@@ -109,12 +114,12 @@ public class ventana extends JFrame {
 		//Instanciar la tabla con el modelo
 		tablaContactos = new JTable(modeloTabla);
 		
-		//Agregar la tabla dentro de un JScrollPane para desplazar
+		//Agregar la tabla dentro de un JScrollPane para poder desplazar
 		JScrollPane scrollTabla = new JScrollPane(tablaContactos);
 		scrollTabla.setBounds(50, 230, 800, 300);
 		panelContactos.add(scrollTabla);
 		
-		//1. Creación y configuración de etiquetas para los campos de entrada.
+		// Creación y configuración de etiquetas para los campos de entrada.
 		lbl_etiqueta1 = new JLabel(Internacionalizacion.getTexto("label.name"));
 		lbl_etiqueta1.setBounds(261, 72, 80, 13);
 		lbl_etiqueta1.setFont(new Font("Tahoma", Font.BOLD, 15));
@@ -135,7 +140,7 @@ public class ventana extends JFrame {
 		lbl_etiqueta4.setBounds(539, 20, 109, 13);
 		panelContactos.add(lbl_etiqueta4);
 		
-		// Creación y configuración de campos de texto para ingresar nombres, teléfonos y correos electrónicos.
+		// Creacion y configuracion de campos de texto para ingresar nombres, telefonos y correos electronicos.
 		txt_nombres = new JTextField();
 		txt_nombres.setBounds(344, 62, 266, 33);
 		txt_nombres.setFont(new Font("Tahoma", Font.PLAIN, 15));
@@ -160,23 +165,23 @@ public class ventana extends JFrame {
 		txt_buscar.setBounds(658, 10, 275, 33);
 		panelContactos.add(txt_buscar);
 		
-		// Creación de una casilla de verificación para indicar si un contacto es favorito.
+		// Creacion de una casilla de verificacion para marcar favoritos
 		chb_favorito = new JCheckBox(Internacionalizacion.getTexto("label.favorite")); 
 		chb_favorito.setBounds(684, 116, 169, 21); 
 		chb_favorito.setFont(new Font("Tahoma", Font.PLAIN, 15));
 		panelContactos.add(chb_favorito); 
 
+		// Creacion del JComboBox para las categorias disponibles
 		cmb_categoria = new JComboBox();
 		cmb_categoria.setBounds(684, 143, 169, 21);
 		panelContactos.add(cmb_categoria);
-
-		// Agregar las categorías traducidas
+		// Agregar las categorias traducidas
 		cmb_categoria.addItem(Internacionalizacion.getTexto("category.select"));
 		cmb_categoria.addItem(Internacionalizacion.getTexto("category.family"));
 		cmb_categoria.addItem(Internacionalizacion.getTexto("category.friends"));
 		cmb_categoria.addItem(Internacionalizacion.getTexto("category.work"));
 
-		//Creacion de botones
+		//Creacion y configuracion de botones
 		btn_add = new JButton(Internacionalizacion.getTexto("button.add"));
 		btn_add.setFont(new Font("Tahoma", Font.PLAIN, 15));
 		btn_add.setBounds(684, 92, 169, 21);
@@ -203,27 +208,34 @@ public class ventana extends JFrame {
 		barraProgreso.setStringPainted(true); 
 		barraProgreso.setValue(0);
 		barraProgreso.setVisible(true);
-		panelContactos.add(barraProgreso);		
+		panelContactos.add(barraProgreso);
 		
-		//Agregar etiquetas a la pestaña de estadisticas
-		lbl_totalContactos = new JLabel("Total de Contactos: ");
+		// JLabel para las notificaciones 
+		lblNotificacion = new JLabel("");
+		lblNotificacion.setFont(new Font("Tahoma", Font.PLAIN, 15));
+		lblNotificacion.setBounds(10, 8, 486, 25); // Posicion y tamaño en la interfaz
+		panelContactos.add(lblNotificacion); // Agregarlo al panel de contactos
+		
+		// Creacion y configuracion de etiquetas a la pestaña de estadisticas
+		lbl_totalContactos = new JLabel(Internacionalizacion.getTexto("label.totalContacts"));
 		lbl_totalContactos.setBounds(50, 50, 300, 25);
 		lbl_totalContactos.setFont(new Font("Tahoma", Font.BOLD, 15));
 		panelEstadisticas.add(lbl_totalContactos);
 		
-		lbl_favoritos = new JLabel("Contactos favoritos: ");
+		lbl_favoritos = new JLabel(Internacionalizacion.getTexto("label.favoriteContacts"));
 		lbl_favoritos.setBounds(50, 90, 300, 25);
 		lbl_favoritos.setFont(new Font("Tahoma", Font.BOLD, 15));
 		panelEstadisticas.add(lbl_favoritos);
 		
-		lbl_porCategoria = new JLabel("Contactos por categoria: ");
+		lbl_porCategoria = new JLabel(Internacionalizacion.getTexto("label.contactsByCategory"));
 		lbl_porCategoria.setBounds(50, 130, 500, 25);
 		lbl_porCategoria.setFont(new Font("Tahoma", Font.BOLD, 15));
 		panelEstadisticas.add(lbl_porCategoria);
 		
+		// Creacion del JComboBox para la internacionalizacion del programa
 		JComboBox<String> cmbIdioma = new JComboBox<>(new String[] {"Español", "Inglés", "Francés"});
-		cmbIdioma.setBounds(50, 20, 150, 30); // Ajusta la posición y tamaño
-		panelContactos.add(cmbIdioma); // Agrega al panel adecuado
+		cmbIdioma.setBounds(50, 43, 166, 21); 
+		panelContactos.add(cmbIdioma); // Agrega el cambio de idioma dentro del panel de contactos
 		cmbIdioma.addActionListener(e -> {
 		    String seleccionado = ((String) cmbIdioma.getSelectedItem()).toLowerCase();
 		    switch (seleccionado) {
@@ -231,40 +243,58 @@ public class ventana extends JFrame {
 		        case "francés" -> Internacionalizacion.setIdioma("FR");
 		        default -> Internacionalizacion.setIdioma("ES");
 		    }
-		    actualizarTextos(); // Método para cambiar los textos de los componentes
+		    actualizarTextos();
 		});
-
 		
 		//Instanciar el controlador para usar el delegado
 		logica_ventana lv=new logica_ventana(this);
 	}
 	
+	// 🔹 Método para actualizar los valores en la pestaña de estadísticas con soporte de idioma
 	public void actualizarEstadisticas(int total, int favoritos, String categorias) {
-		lbl_totalContactos.setText("Total de Contactos: " + total);
-		lbl_favoritos.setText("Contactos favoritos: " + favoritos);
-		lbl_porCategoria.setText("Contactos por categoria: " + categorias);
+	    lbl_totalContactos.setText(Internacionalizacion.getTexto("label.totalContacts") + ": " + total);
+	    lbl_favoritos.setText(Internacionalizacion.getTexto("label.favoriteContacts") + ": " + favoritos);
+	    lbl_porCategoria.setText(Internacionalizacion.getTexto("label.contactsByCategory") + ": " + categorias);
 	}
+
 	
+	// Metodo para cambiar los textos de los componentes segun el idioma seleccionado
 	public void actualizarTextos() {
-	    setTitle(Internacionalizacion.getTexto("window.title"));
+	    setTitle(Internacionalizacion.getTexto("window.title")); // Actualizar el titulo de la ventana
+	    
+	    // Actualizar las pestañas del JTabbedPane
+	    tabbedPane.setTitleAt(0, Internacionalizacion.getTexto("tab.contacts"));
+	    tabbedPane.setTitleAt(1, Internacionalizacion.getTexto("tab.statistics"));
+	    
+	    // Actualizar etiquetas de los campos de entrada
 	    lbl_etiqueta1.setText(Internacionalizacion.getTexto("label.name"));
 	    lbl_etiqueta2.setText(Internacionalizacion.getTexto("label.phone"));
 	    lbl_etiqueta3.setText(Internacionalizacion.getTexto("label.email"));
 	    lbl_etiqueta4.setText(Internacionalizacion.getTexto("label.search"));
 	    
+	    // Actualizar los textos de los botones
 	    btn_add.setText(Internacionalizacion.getTexto("button.add"));
 	    btn_modificar.setText(Internacionalizacion.getTexto("button.modify"));
 	    btn_eliminar.setText(Internacionalizacion.getTexto("button.delete"));
 	    btn_exportar.setText(Internacionalizacion.getTexto("button.export"));
-
+	    
+	    // Actualizar la casilla de verificación de favoritos
 	    chb_favorito.setText(Internacionalizacion.getTexto("label.favorite"));
+	    
+	    // Actualizar las opciones del ComboBox de categorías
 	    cmb_categoria.removeAllItems();
 	    cmb_categoria.addItem(Internacionalizacion.getTexto("category.select"));
 	    cmb_categoria.addItem(Internacionalizacion.getTexto("category.family"));
 	    cmb_categoria.addItem(Internacionalizacion.getTexto("category.friends"));
 	    cmb_categoria.addItem(Internacionalizacion.getTexto("category.work"));
+	    
+	    // Refrescar el JComboBox para aplicar los cambios visuales
 	    cmb_categoria.repaint();
 	    cmb_categoria.revalidate();
+	    
+	    // Actualizar los textos en la pestaña de estadísticas
+	    lbl_totalContactos.setText(Internacionalizacion.getTexto("label.totalContacts") + ": " + total);
+	    lbl_favoritos.setText(Internacionalizacion.getTexto("label.favoriteContacts") + ": " + favoritos);
+	    lbl_porCategoria.setText(Internacionalizacion.getTexto("label.contactsByCategory") + ": " + categorias);
 	}
-	
 }
